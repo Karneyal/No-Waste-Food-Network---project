@@ -1,0 +1,27 @@
+rules_version='2'
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      // Allow create for authenticated users with valid roles
+      allow create: if request.auth != null && 
+        request.auth.uid == userId && 
+        request.resource.data.role in ['donor', 'receiver', 'admin'];
+      
+      // Allow update if user is updating their own data
+      allow update: if request.auth != null && 
+        request.auth.uid == userId && (
+          !('role' in request.resource.data) || 
+          request.resource.data.role == resource.data.role
+        );
+      
+      // Allow read if user is reading their own data
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow access to other collections if needed
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
